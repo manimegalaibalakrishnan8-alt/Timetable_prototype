@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Timetable Generator — Full</title>
+
+  <!-- Styles: expanded for readability -->
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --danger: #ef4444;
+      --ok: #10b981;
+      --green: #16a34a;
+      --radius: 10px;
+      --shadow: 0 6px 18px rgba(2,6,23,0.04);
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg);
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.35;
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      background: var(--card);
+      border-bottom: 1px solid #e6eef6;
+      box-sizing: border-box;
+      position: sticky;
+      top: 0;
+      z-index: 60;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .hamburger {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: transparent;
+      border: 0;
+      padding: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .hamburger svg { width: 20px; height: 20px; }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hello-bubble {
+      font-size: 14px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #eef2ff;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #d1d5db;
+      color: #111827;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* Layout */
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 56px);
+    }
+
+    .sidebar {
+      width: 300px;
+      background: var(--card);
+      border-right: 1px solid #e6eef6;
+      height: calc(100vh - 56px);
+      overflow-y: auto;
+      padding: 14px;
+      box-sizing: border-box;
+      position: fixed;
+      left: 0;
+      top: 56px;
+      bottom: 0;
+      transform: translateX(-110%);
+      transition: transform 0.22s ease;
+      z-index: 70;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar h2 { margin: 0 0 10px 0; font-size: 15px; }
+
+    .sidebar .empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+
+    .sidebar-entry {
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #fbfdff;
+      border: 1px solid #eef2ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: space-between;
+    }
+
+    .sidebar-entry:hover { background: #eef6ff; cursor: pointer; }
+
+    .sidebar-entry .meta { display: flex; flex-direction: column; }
+
+    .sidebar-entry strong { font-size: 14px; }
+
+    .sidebar-entry .sub { font-size: 12px; color: var(--muted); }
+
+    .sidebar-actions { display: flex; gap: 6px; }
+
+    /* Main area */
+    .main {
+      flex: 1;
+      padding: 18px;
+      box-sizing: border-box;
+      width: 100%;
+      margin-left: 0;
+      transition: margin-left .18s ease;
+    }
+
+    @media (min-width: 980px) {
+      .main { margin-left: 300px; }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    h1 { margin: 0 0 8px 0; font-size: 22px; }
+    h2 { margin: 6px 0; font-size: 18px; }
+
+    label { display: block; font-weight: 600; margin: 8px 0 6px; }
+    input, select, textarea, button { font-family: inherit; }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .row .flex { flex: 1; }
+
+    button {
+      background: var(--accent);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      background: #eef2ff;
+      border-radius: 20px;
+      padding: 6px 10px;
+      margin: 6px 6px 6px 0;
+      gap: 8px;
+    }
+
+    .chip span {
+      max-width: 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chip .del {
+      background: transparent;
+      border: 0;
+      padding: 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+    }
+
+    .chip .del:hover {
+      color: #b91c1c;
+      background: rgba(185,28,28,0.06);
+    }
+
+    .muted { color: var(--muted); font-size: 13px; }
+    .small { font-size: 13px; }
+
+    /* Timetable presentation */
+    .timetable-block {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: 0 3px 10px rgba(2,6,23,0.04);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 8px;
+      min-width: 480px;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid #e6eef6;
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
+
+    th { background: #f8fafc; white-space: nowrap; }
+
+    .controls { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .hidden { display: none !important; }
+
+    .notice { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px; margin: 8px 0; border-radius: 6px; }
+    .bad { background: #fff0f0; border-left: 4px solid var(--danger); padding: 8px; margin: 8px 0; border-radius: 6px; }
+    .ok { background: #f0fdf4; border-left: 4px solid var(--ok); padding: 8px; margin: 8px 0; border-radius: 6px; }
+
+    .center { display: flex; justify-content: center; align-items: center; }
+
+    .login-card { max-width: 520px; margin: 30px auto; padding: 20px; }
+
+    .pdf-btn {
+      background: var(--green);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .downloadAll-btn {
+      background: #0ea5a4;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .finalize-btn {
+      background: var(--accent);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .finalized-btn {
+      background: #9ca3af;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: default;
+    }
+
+    .finalized-block {
+      opacity: 0.65;
+      background: #f3f4f6;
+    }
+    .finalized-table {
+      opacity: 0.65;
+      background: #f3f4f6;
+    }
+
+    /* keep download buttons fully active inside finalized blocks */
+
+    .finalized-batch-download {
+      background: var(--green);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+    }
+
+    /* keep download buttons fully active inside finalized blocks */
+    .finalized-block .pdf-btn,
+    .finalized-block .downloadAll-btn,
+    .finalized-block .finalized-batch-download {
+      opacity: 1 !important;
+      filter: none !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal-card {
+      background: white;
+      padding: 18px;
+      border-radius: 10px;
+      max-width: 960px;
+      width: 94%;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+
+    .modal-close {
+      float: right;
+      background: transparent;
+      border: 0;
+      color: #111;
+      font-weight: 700;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .spinner {
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid var(--accent);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: 8px auto;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
+
+    /* responsive tweaks */
+    @media (max-width: 980px) {
+      .sidebar {
+        width: 78%;
+        max-width: 360px;
+      }
+      .main { margin-left: 0; }
+    }
+
+    @media (max-width: 640px) {
+      th, td { padding: 6px; font-size: 12px; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .topbar { padding: 0 8px; }
+      .brand { font-size: 16px; }
+      .hamburger { width: 34px; height: 34px; }
+    }
+  
+    /* Ensure download buttons remain active & colored inside finalized blocks */
+    .finalized-block .pdf-btn { background: var(--green) !important; color:#fff !important; opacity:1 !important; pointer-events:auto !important; }
+    .finalized-block .downloadAll-btn { background: #0ea5a4 !important; color:#fff !important; opacity:1 !important; pointer-events:auto !important; }
+
+
+    /* Requirements Page Modern UI */
+    #page-requirements input, #page-requirements select, #page-requirements textarea {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 8px;
+      width: 100%;
+      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+    #page-requirements label { font-weight: 600; display:block; margin-top:6px; }
+    #page-requirements .btn-ghost { background:#f9fafb; border:1px solid #e5e7eb; }
+    #page-requirements .btn-ghost:hover { background:#f3f4f6; }
+    #page-requirements button { border-radius:8px; padding:8px 14px; }
+
+
+    /* Kebab menu styles injected */
+    .kebab-wrap { display:inline-flex; position: relative; margin-left:8px; }
+    .kebab-btn { border: 0; background: transparent; font-size: 18px; line-height:1; padding: 4px 6px; color: #6b7280; cursor: pointer; border-radius:6px; transition: transform 150ms ease, background 150ms ease; }
+    .kebab-btn:hover { transform: scale(1.06); background: rgba(15,23,42,0.04); color: #111; }
+    .kebab-menu { position: absolute; right: 0; top: 28px; background: white; border: 1px solid #e6eef6; border-radius: 8px; box-shadow: 0 6px 18px rgba(2,6,23,0.06); z-index: 9999; overflow: hidden; display:flex; flex-direction: column; min-width: 120px; }
+    .kebab-menu-item { padding: 8px 12px; background: transparent; border: 0; text-align: left; cursor: pointer; font-weight:600; color: #0f172a; }
+    .kebab-menu-item:hover { background: #f8fafc; color: #ef4444; }
+    .chip.fade-out { opacity: 0 !important; transform: translateY(-6px) !important; height: 0 !important; margin: 0 !important; padding: 0 !important; transition: all 260ms ease; }
+    
+    .temp-changed { background: #fff8e6; border: 1px solid #ffe8a3; }
+    .temp-teacher { color: #b45309; font-weight: 700; }
+
+/* Sidebar entry fix */
+.sidebar-entry {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #fbfdff;
+  border: 1px solid #eef2ff;
+  display: flex;
+  flex-direction: column;  /* stack title/meta above buttons */
+  align-items: flex-start; /* left-align text */
+  gap: 6px;                /* spacing between text and buttons */
+}
+
+/* Ensure actions stay in one row */
+.sidebar-actions {
+  display: flex;
+  flex-wrap: nowrap;   /* prevent wrapping */
+  gap: 6px;
+  width: 100%;
+  justify-content: flex-start; /* align buttons neatly to the left */
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand">
+      <!-- Keep hamburger in DOM but we will hide it when on login page -->
+      <button class="hamburger" id="hamburgerBtn" title="Saved timetables (toggle)">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 6h16M4 12h16M4 18h16" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      Timetable Generator
+    </div>
+
+    <div class="top-actions">
+      <div id="helloName" class="hello-bubble hidden">Hello, User</div>
+      <button id="logoutBtn" class="btn-ghost hidden" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <!-- Sidebar (toggleable) -->
+    <aside class="sidebar" id="sidebar">
+      <h2>Saved Timetables</h2>
+      <div id="sidebarList">
+        <div class="empty">No saved timetables</div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+
+      <!-- ====== LOGIN PAGE ====== -->
+      <section id="page-login" class="card login-card">
+        <h1 style="text-align:center">Login</h1>
+        <div class="muted" style="text-align:center">Local-only login for prototype (stored in browser)</div>
+
+        <label for="loginUsername">Username</label>
+        <input id="loginUsername" type="text" placeholder="username">
+
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" placeholder="password">
+
+        <div style="margin-top:12px" class="center">
+          <button style="width:100%;" id="loginBtn" onclick="doLogin()">Login</button>
+        </div>
+
+        <div style="margin-top:10px" class="center">
+          <button class="btn-ghost" onclick="showPage('register')">New user? Register</button>
+        </div>
+      </section>
+
+      <!-- ====== REGISTER PAGE ====== -->
+      <section id="page-register" class="card login-card hidden">
+        <h1 style="text-align:center">Register</h1>
+
+        <label for="regUsername">Username (for login)</label>
+        <input id="regUsername" type="text" placeholder="username">
+
+        <label for="regName">Name</label>
+        <input id="regName" type="text" placeholder="Full name">
+
+        <label for="regPassword">Password</label>
+        <input id="regPassword" type="password" placeholder="password">
+
+        <div style="margin-top:12px" class="center">
+          <button style="width:100%;" id="registerBtn" onclick="doRegister()">Register</button>
+        </div>
+
+        <div style="margin-top:10px" class="center">
+          <button class="btn-ghost" onclick="showPage('login')">Back to Login</button>
+        </div>
+      </section>
+
+      <!-- ====== DASHBOARD ====== -->
+      <section id="page-dashboard" class="card hidden">
+        <h1>Your saved timetables</h1>
+        <div id="dashboardMsg" class="muted small">Loading…</div>
+
+        <!-- single in-content Generate button (top-right duplicate removed as requested) -->
+        <div style="margin-top:12px" class="controls">
+          <button onclick="goToGenerate()" class="btn-ghost">Generate new timetable</button>
+        </div>
+
+        <div id="dashboardList" style="margin-top:12px"></div>
+      </section>
+
+      <!-- ====== REQUIREMENTS INPUT ====== -->
+      <section id="page-requirements" class="card hidden">
+        <h1>Please fill the requirements to generate timetable</h1>
+
+        <div class="muted small">Add classrooms, batches, subjects, teachers and optional constraints. Use Preview to check teacher→batch mapping.</div>
+
+        <h2>Classrooms</h2>
+        <div id="classroomsList"></div>
+        <div class="row">
+          <input id="newClassroom" placeholder="Room name (e.g., R101)">
+          <button class="btn-ghost" onclick="addClassroom()">Add</button>
+        </div>
+
+        <h2>Batches</h2>
+        <div id="batchesList"></div>
+        <div class="row">
+          <input id="newBatch" placeholder="Batch name">
+          <button class="btn-ghost" onclick="addBatch()">Add</button>
+        </div>
+
+        <h2>Periods per day</h2>
+        <input id="periodsPerDay" type="number" min="1" value="6">
+
+        <h2>Subjects</h2>
+        <div id="subjectsList"></div>
+        <div class="row">
+          <input id="newSubject" placeholder="Subject name">
+          <button class="btn-ghost" onclick="addSubject()">Add Subject</button>
+        </div>
+
+        <h2>Teachers (per subject)</h2>
+        <div id="teachersList"></div>
+        <div class="row">
+          <select id="teacherSubject"></select>
+          <input id="teacherName" placeholder="Teacher name (e.g., Mr P)">
+          <input id="teacherClasses" type="number" min="1" placeholder="Classes/week">
+          <button class="btn-ghost" onclick="addTeacher()">Add Teacher</button>
+        </div>
+
+        <h2>Teacher daily max (required)</h2>
+        <div id="teacherMaxList"></div>
+        <div class="row">
+          <select id="tmTeacher"></select>
+          <input id="tmMax" type="number" min="1" placeholder="Max/day (required)" required>
+          <button class="btn-ghost" onclick="addTeacherMax()">Add</button>
+        </div>
+
+        <h2>Fixed classes (optional)</h2>
+        <div id="fixedList"></div>
+        <div class="row">
+          <select id="fxBatch"></select>
+          <select id="fxDay">
+            <option value="0">Mon</option>
+            <option value="1">Tue</option>
+            <option value="2">Wed</option>
+            <option value="3">Thu</option>
+            <option value="4">Fri</option>
+          </select>
+          <input id="fxPeriod" type="number" min="1" placeholder="Period #">
+          <input id="fxSubject" placeholder="Subject name">
+          <input id="fxRoom" placeholder="Room (optional)">
+          <button class="btn-ghost" onclick="addFixed()">Add Fixed</button>
+        </div>
+
+        <div class="controls" style="margin-top:12px; justify-content:flex-end;">
+          <button class="btn-ghost" onclick="openPreviewModal()">Preview Assignments</button>
+          <button class="btn-ghost" onclick="resetAll()">Reset / Load Sample</button>
+          <button onclick="generateAndShowTimetable()">Generate Timetable</button>
+          <button class="btn-ghost" onclick="goToDashboard()">Cancel</button>
+        </div>
+      </section>
+
+      <!-- ====== TIMETABLES PAGE ====== -->
+      <section id="page-timetables" class="card hidden">
+        <h1>Generated Timetables</h1>
+
+        <div id="warningsArea"></div>
+
+        <div id="loadingArea" class="hidden center" style="flex-direction:column">
+          <div class="spinner"></div>
+          <div id="progressText" style="margin-top:6px">Generating timetables…</div>
+        </div>
+
+        <div id="currentGenInfo" class="muted small" style="margin-bottom:8px"></div>
+
+        <div id="option1Container"></div>
+        <div id="option2Container"></div>
+        <div id="option3Container"></div>
+
+        <div id="otherOptionsContainer" style="margin-top:14px"></div>
+
+        <div class="controls" id="bottomControls">
+          <button id="showMoreBtn" class="btn-ghost hidden" onclick="showMoreOptions()">Show More Options</button>
+          <button id="clearMoreBtn" class="btn-ghost hidden" onclick="clearExtraOptions()">Clear Options</button>
+          <button class="btn-ghost" onclick="goToRequirements()">Back to Requirements</button>
+          <button class="btn-ghost" onclick="goToDashboard()">Back to Dashboard</button>
+        </div>
+      </section>
+
+      <!-- ====== PREVIEW MODAL ====== -->
+      <div id="previewModal" class="modal-backdrop hidden" onclick="closePreviewModalOnBackdrop(event)">
+        <div class="modal-card" role="dialog" aria-modal="true">
+          <button class="modal-close" onclick="closePreviewModal()">✕</button>
+          <div id="previewContent"></div>
+          <div style="margin-top:12px;text-align:right">
+            <button class="btn-ghost" onclick="closePreviewModal()">Close</button>
+          </div>
+        </div>
+      </div>
+      <!-- ====== ABSENCE MODAL ====== -->
+      <div id="absenceModal" class="modal-backdrop hidden" onclick="closeAbsenceModalOnBackdrop(event)" >
+        <div class="modal-card" role="dialog" aria-modal="true">
+          <button class="modal-close" onclick="closeAbsenceModal()">✕</button>
+          <h2>Generate Temporary Timetable</h2>
+          <label>Teacher</label>
+          <select id="absenceTeacher"></select>
+          <label>Date</label>
+          <input type="date" id="absenceDate">
+          <label>From Period</label>
+          <input type="number" id="absencePeriod" min="1" value="1">
+          <label>To Period</label>
+          <input type="number" id="absenceToPeriod" min="1">
+          <div style="margin-top:12px;text-align:right">
+            <button class="btn-ghost" onclick="closeAbsenceModal()">Cancel</button>
+            <button onclick="confirmAbsence()">Generate Temporary Timetable</button>
+          </div>
+        </div>
+      </div>
+
+</div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    /**************************************************************************
+     * Full Application JavaScript
+     **************************************************************************/
+
+    const STORAGE_USERS = 'tt_users_v_full_v1';
+    const STORAGE_FINALIZED = 'tt_finalized_v_full_v1';
+
+    const appState = {
+      classrooms: [],
+      batches: [],
+      subjectNames: [],
+      subjectTeachers: {},
+      teacherMax: {},
+      fixed: [],
+      periodsPerDay: 6,
+      days: ['Mon','Tue','Wed','Thu','Fri'],
+      currentUser: null,
+      solutions: [],
+      shownCount: 0,
+      isSolving: false,
+      __currentGenerationId: null
+    };
+
+    /* ---------- Storage helpers ---------- */
+    function loadUsersFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_USERS);
+        if (!raw) return {};
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('Failed to load users from storage', e);
+        return {};
+      }
+    }
+
+    function saveUsersToStorage(users) {
+      try {
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+      } catch (e) {
+        console.error('Failed to save users', e);
+      }
+    }
+
+    function loadFinalizedMap() {
+      try {
+        const raw = localStorage.getItem(STORAGE_FINALIZED);
+        if (!raw) return {};
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('Failed to load finalized map', e);
+        return {};
+      }
+    }
+
+    function saveFinalizedMap(map) {
+      try {
+        localStorage.setItem(STORAGE_FINALIZED, JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to save finalized map', e);
+      }
+    }
+
+    function loadFinalizedForUser(username) {
+      const map = loadFinalizedMap();
+      return map[username] || [];
+    }
+
+    function saveFinalizedForUser(username, arr) {
+      const map = loadFinalizedMap();
+      map[username] = arr || [];
+      saveFinalizedMap(map);
+    }
+
+    /* ---------- DOM helper ---------- */
+    function el(tag, attrs = {}, ...children) {
+      const node = document.createElement(tag);
+      for (const k in attrs) {
+        if (k === 'class') node.className = attrs[k];
+        else if (k === 'onclick') node.onclick = attrs[k];
+        else node.setAttribute(k, attrs[k]);
+      }
+      children.flat().forEach(c => {
+        if (typeof c === 'string' || typeof c === 'number') node.appendChild(document.createTextNode(String(c)));
+        else if (c) node.appendChild(c);
+      });
+      return node;
+    }
+
+    /* ---------- Auth ---------- */
+    function doRegister() {
+      const username = document.getElementById('regUsername').value.trim();
+      const name = document.getElementById('regName').value.trim() || username;
+      const password = document.getElementById('regPassword').value;
+
+      if (!username || !password) {
+        return alert('Please enter username and password');
+      }
+
+      const users = loadUsersFromStorage();
+      if (users[username]) {
+        return alert('Username already exists. Pick another username.');
+      }
+
+      users[username] = { password, name };
+      saveUsersToStorage(users);
+
+      alert('Registered successfully. Now login.');
+      document.getElementById('regUsername').value = '';
+      document.getElementById('regName').value = '';
+      document.getElementById('regPassword').value = '';
+
+      showPage('login');
+    }
+
+    function doLogin() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      if (!username || !password) {
+        return alert('Please enter username and password');
+      }
+
+      const users = loadUsersFromStorage();
+      if (!users[username] || users[username].password !== password) {
+        return alert('Invalid username/password');
+      }
+
+      appState.currentUser = { username, name: users[username].name || username };
+
+      document.getElementById('loginUsername').value = '';
+      document.getElementById('loginPassword').value = '';
+
+      onLoginSuccess();
+    }
+
+    function doLogout() {
+      appState.currentUser = null;
+      document.getElementById('helloName').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      document.getElementById('sidebar').classList.remove('open');
+      showPage('login');
+    }
+
+    function onLoginSuccess() {
+      document.getElementById('helloName').innerText = 'Hello, ' + (appState.currentUser.name || appState.currentUser.username);
+      document.getElementById('helloName').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+
+      renderSidebar();
+      renderDashboard();
+
+      showPage('dashboard');
+    }
+
+    /* ---------- Pages ---------- */
+    function showPage(page) {
+      const pages = ['login', 'register', 'dashboard', 'requirements', 'timetables'];
+
+      pages.forEach(p => {
+        const node = document.getElementById('page-' + p);
+        if (node) node.classList.add('hidden');
+      });
+
+      const target = document.getElementById('page-' + page);
+      if (target) target.classList.remove('hidden');
+
+      // Hide hamburger on login page (remove visible toggle)
+      const hb = document.getElementById('hamburgerBtn');
+      if (hb) hb.style.display = (page === 'login' || page === 'register' || page === 'dashboard' ? 'none' : 'inline-flex');
+
+      if (!appState.currentUser) {
+        document.getElementById('sidebarList').innerHTML = '<div class="empty">Login to see your saved timetables</div>';
+      }
+
+      if (!window.__suppressShowPageScroll) { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+    }
+
+    /* ---------- Dashboard & Sidebar ---------- */
+    function renderDashboard() {
+      const list = document.getElementById('dashboardList');
+      list.innerHTML = '';
+
+      if (!appState.currentUser) {
+        document.getElementById('dashboardMsg').innerText = 'Please login or register to access your timetables.';
+        return;
+      }
+
+      const _savedRaw = loadFinalizedForUser(appState.currentUser.username) || [];
+      // auto-clean expired temporary timetables
+      try {
+        const now = new Date();
+        const filtered = _savedRaw.filter(x => {
+          if (!x || !x.meta || !x.meta.expiresAt) return true;
+          const dd = new Date(x.meta.expiresAt + 'T23:59:59');
+          return dd >= now;
+        });
+        if (filtered.length !== _savedRaw.length) {
+          saveFinalizedForUser(appState.currentUser.username, filtered);
+        }
+        var saved = filtered;
+      } catch(e) { console.error('Expired cleanup failed', e); var saved = _savedRaw; }
+if (saved.length === 0) {
+      document.getElementById('dashboardMsg').innerText = 'You have no saved timetables. Create a new one.';
+      return;
+    }
+
+      document.getElementById('dashboardMsg').innerText = 'Click a saved timetable to open it.';
+
+      saved.slice().reverse().forEach(t => {
+        const card = el('div', { class: 'card' });
+
+        card.appendChild(el('div', {}, el('strong', {}, t.title)));
+        card.appendChild(el('div', { class: 'muted small' }, t.meta && t.meta.createdAt ? t.meta.createdAt : 'Saved'));
+
+        const row = el('div', { class: 'row', style: 'margin-top:8px' });
+        row.appendChild(el('button', { onclick: () => loadFinalizedIntoMain(t) }, 'Open'));
+        row.appendChild(el('button', { class: 'btn-ghost', onclick: () => openAbsenceModal(t) }, 'Handle Absence'));
+        row.appendChild(el('button', { class: 'btn-ghost', onclick: () => { if (confirm('Delete saved timetable?')) { deleteSaved(t.id); renderDashboard(); renderSidebar(); } } }, 'Delete'));
+        row.appendChild(el('button', { class: 'pdf-btn', onclick: () => downloadAllForSchedule(t.schedule, `Saved_${t.id}`) }, 'Download PDF'));
+
+        card.appendChild(row);
+        list.appendChild(card);
+      });
+    }
+
+    function deleteSaved(id) {
+      if (!appState.currentUser) return;
+      let arr = loadFinalizedForUser(appState.currentUser.username);
+      arr = arr.filter(x => x.id !== id);
+      saveFinalizedForUser(appState.currentUser.username, arr);
+    }
+
+    function renderSidebar() {
+      const box = document.getElementById('sidebarList');
+      box.innerHTML = '';
+
+      if (!appState.currentUser) {
+        box.appendChild(el('div', { class: 'empty' }, 'Login to see saved timetables'));
+        return;
+      }
+
+      var _arrRaw = loadFinalizedForUser(appState.currentUser.username) || [];
+      var arr = _arrRaw;
+      try {
+        const now = new Date();
+        const filteredArr = _arrRaw.filter(x => {
+          if (!x || !x.meta || !x.meta.expiresAt) return true;
+          const dd = new Date(x.meta.expiresAt + 'T23:59:59');
+          return dd >= now;
+        });
+        if (filteredArr.length !== _arrRaw.length) {
+          saveFinalizedForUser(appState.currentUser.username, filteredArr);
+        }
+        arr = filteredArr;
+      } catch(e) { console.error('Sidebar cleanup failed', e); arr = _arrRaw; }
+
+
+      if (!arr || arr.length === 0) {
+        box.appendChild(el('div', { class: 'empty' }, 'No finalized timetables'));
+        return;
+      }
+
+      arr.slice().reverse().forEach(f => {
+        const entry = el('div', { class: 'sidebar-entry' });
+        const meta = el('div', { class: 'meta' });
+        meta.appendChild(el('strong', {}, f.title));
+        meta.appendChild(el('span', { class: 'sub' }, f.meta && f.meta.createdAt ? f.meta.createdAt : 'Saved timetable'));
+        entry.appendChild(meta);
+
+        const actions = el('div', { class: 'sidebar-actions' });
+        actions.appendChild(el('button', { class: 'btn-ghost', onclick: (e) => { e.stopPropagation(); loadFinalizedIntoMain(f); } }, 'Open'));
+        actions.appendChild(el('button', { class: 'btn-ghost', onclick: (e) => { e.stopPropagation(); openAbsenceModal(f); } }, 'Handle Absence'));
+        actions.appendChild(el('button', { class: 'btn-ghost', onclick: (e) => { e.stopPropagation(); if (confirm('Delete saved timetable?')) { deleteSaved(f.id); renderSidebar(); renderDashboard(); } } }, 'Delete'));
+        entry.appendChild(actions);
+
+        entry.onclick = () => loadFinalizedIntoMain(f);
+
+        box.appendChild(entry);
+      });
+    }
+
+    /* ---------- Requirements UI ---------- */
+    function redrawLists() {
+      // Classrooms
+      const cl = document.getElementById('classroomsList');
+      cl.innerHTML = '';
+      appState.classrooms.forEach((r, i) => {
+        cl.appendChild(el('div', { class: 'chip' },
+          el('span', {}, r),
+          delButton(() => { appState.classrooms.splice(i, 1); redrawLists(); prepareSelects(); })
+        ));
+      });
+
+      // Batches
+      const bl = document.getElementById('batchesList');
+      bl.innerHTML = '';
+      appState.batches.forEach((b, i) => {
+        bl.appendChild(el('div', { class: 'chip' },
+          el('span', {}, b),
+          delButton(() => { appState.batches.splice(i, 1); redrawLists(); prepareSelects(); })
+        ));
+      });
+
+      // Subjects
+      const sl = document.getElementById('subjectsList');
+      sl.innerHTML = '';
+      appState.subjectNames.forEach((s, i) => {
+        sl.appendChild(el('div', { class: 'chip' },
+          el('span', {}, s),
+          delButton(() => { delete appState.subjectTeachers[s]; appState.subjectNames.splice(i, 1); redrawLists(); prepareSelects(); })
+        ));
+      });
+
+      // Teachers
+      const tlist = document.getElementById('teachersList');
+      tlist.innerHTML = '';
+      appState.subjectNames.forEach(subj => {
+        (appState.subjectTeachers[subj] || []).forEach((entry, idx) => {
+          tlist.appendChild(el('div', { class: 'chip' },
+            el('span', {}, `${subj}: ${entry.teacher} (${entry.classesPerWeek}/wk)`),
+            delButton(() => { appState.subjectTeachers[subj].splice(idx, 1); if (appState.subjectTeachers[subj].length === 0) delete appState.subjectTeachers[subj]; redrawLists(); prepareSelects(); })
+          ));
+        });
+      });
+
+      // teacher max
+      const tmax = document.getElementById('teacherMaxList');
+      tmax.innerHTML = '';
+      Object.entries(appState.teacherMax).forEach(([teacher, max]) => {
+        tmax.appendChild(el('div', { class: 'chip' },
+          el('span', {}, `${teacher} • max/day ${max}`),
+          delButton(() => { delete appState.teacherMax[teacher]; redrawLists(); prepareSelects(); })
+        ));
+      });
+
+      // fixed classes
+      const fx = document.getElementById('fixedList');
+      fx.innerHTML = '';
+      appState.fixed.forEach((f, i) => {
+        const txt = `${f.batch} • ${appState.days[f.day]} • P${f.period} • ${f.subject}${f.room ? (' • ' + f.room) : ''}`;
+        fx.appendChild(el('div', { class: 'chip' },
+          el('span', {}, txt),
+          delButton(() => { appState.fixed.splice(i, 1); redrawLists(); prepareSelects(); })
+        ));
+      });
+
+      // periods per day
+      document.getElementById('periodsPerDay').value = appState.periodsPerDay;
+
+      prepareSelects();
+    }
+
+    function delButton(onclick) {
+      // Kebab menu replacement for delete/edit (preserves original delete onclick)
+      const wrap = el('div', { class: 'kebab-wrap' });
+      const btn = el('button', { class: 'kebab-btn', type: 'button' }, '⋮');
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const existing = wrap.querySelector('.kebab-menu');
+        if (existing) { existing.remove(); return; }
+        const menu = el('div', { class: 'kebab-menu' },
+          el('button', { class: 'kebab-menu-item', type: 'button', onclick: function(ev) {
+            ev.stopPropagation();
+            const chip = wrap.closest('.chip');
+            if (chip) chip.classList.add('fade-out');
+            setTimeout(function() {
+              try { if (typeof onclick === 'function') onclick(); } catch (err) { console.error(err); }
+              if (chip && chip.parentNode) chip.parentNode.removeChild(chip);
+            }, 220);
+            menu.remove();
+          } }, 'Delete'),
+          el('button', { class: 'kebab-menu-item', type: 'button', onclick: function(ev) {
+            ev.stopPropagation();
+            try {
+              const chip = wrap.closest('.chip');
+              if (!chip) { menu.remove(); return; }
+              const span = chip.querySelector('span');
+              const oldText = span ? span.innerText.trim() : '';
+              let newText = prompt('Edit value', oldText);
+              if (newText === null) { menu.remove(); return; }
+              newText = newText.trim();
+              if (newText === oldText) { menu.remove(); return; }
+              const parentId = chip.parentElement ? chip.parentElement.id : '';
+              if (parentId === 'classroomsList') {
+                const idx = appState.classrooms.indexOf(oldText);
+                if (idx !== -1) appState.classrooms[idx] = newText;
+              } else if (parentId === 'batchesList') {
+                const idx = appState.batches.indexOf(oldText);
+                if (idx !== -1) appState.batches[idx] = newText;
+              } else if (parentId === 'subjectsList') {
+                const idx = appState.subjectNames.indexOf(oldText);
+                if (idx !== -1) {
+                  const oldKey = appState.subjectNames[idx];
+                  if (oldKey !== newText) {
+                    appState.subjectTeachers[newText] = appState.subjectTeachers[oldKey] || [];
+                    delete appState.subjectTeachers[oldKey];
+                  }
+                  appState.subjectNames[idx] = newText;
+                }
+              } else if (parentId === 'teachersList') {
+                // parse like "Subject: Name (n/wk)"
+                const colon = oldText.indexOf(':');
+                if (colon !== -1) {
+                  const subj = oldText.slice(0, colon).trim();
+                  const arr = appState.subjectTeachers[subj] || [];
+                  const entryIndex = arr.findIndex(en => `${subj}: ${en.teacher} (${en.classesPerWeek}/wk)` === oldText);
+                  if (entryIndex !== -1) {
+                    // prompt separately for teacher and classes
+                    const teacherName = prompt('Teacher name', arr[entryIndex].teacher);
+                    if (teacherName === null) { menu.remove(); return; }
+                    const classesPrompt = prompt('Classes per week (number)', String(arr[entryIndex].classesPerWeek || 1));
+                    if (classesPrompt === null) { menu.remove(); return; }
+                    const classesPerWeek = parseInt(classesPrompt, 10) || arr[entryIndex].classesPerWeek || 1;
+                    arr[entryIndex].teacher = teacherName.trim();
+                    arr[entryIndex].classesPerWeek = classesPerWeek;
+                  }
+                }
+              } else if (parentId === 'teacherMaxList') {
+                const parts = oldText.split('•').map(s=>s.trim());
+                const teacher = parts[0];
+                const maxMatch = oldText.match(/max\/day\s*(\d+)/);
+                const curr = maxMatch ? maxMatch[1] : '';
+                const newMaxPrompt = prompt('Max per day (number)', curr || '1');
+                if (newMaxPrompt === null) { menu.remove(); return; }
+                const newMax = parseInt(newMaxPrompt, 10) || 1;
+                appState.teacherMax[teacher] = newMax;
+              } else {
+                // fallback: try to update in arrays if present
+                let idx = appState.classrooms.indexOf(oldText);
+                if (idx !== -1) { appState.classrooms[idx] = newText; }
+                idx = appState.batches.indexOf(oldText);
+                if (idx !== -1) { appState.batches[idx] = newText; }
+                idx = appState.subjectNames.indexOf(oldText);
+                if (idx !== -1) { appState.subjectNames[idx] = newText; }
+              }
+              try { redrawLists(); prepareSelects(); } catch (e) { console.error(e); }
+            } catch (err) { console.error('Edit failed', err); }
+            menu.remove();
+          } }, 'Edit')
+        );
+        wrap.appendChild(menu);
+      };
+      wrap.appendChild(btn);
+      return wrap;
+    }
+
+    function prepareSelects() {
+      const fxBatch = document.getElementById('fxBatch');
+      if (fxBatch) {
+        fxBatch.innerHTML = '';
+        appState.batches.forEach(b => fxBatch.appendChild(el('option', {}, b)));
+      }
+
+      const tsub = document.getElementById('teacherSubject');
+      if (tsub) {
+        tsub.innerHTML = '';
+        appState.subjectNames.forEach(s => tsub.appendChild(el('option', { value: s }, s)));
+      }
+
+      const tm = document.getElementById('tmTeacher');
+      if (tm) {
+        tm.innerHTML = '';
+        getUniqueTeachers().forEach(t => tm.appendChild(el('option', {}, t)));
+      }
+    }
+
+    /* ---------- Add operations ---------- */
+    function addClassroom() {
+      const v = document.getElementById('newClassroom').value.trim();
+      if (!v) return alert('Enter room');
+      appState.classrooms.push(v);
+      document.getElementById('newClassroom').value = '';
+      redrawLists();
+    }
+
+    function addBatch() {
+      const v = document.getElementById('newBatch').value.trim();
+      if (!v) return alert('Enter batch');
+      appState.batches.push(v);
+      document.getElementById('newBatch').value = '';
+      redrawLists();
+    }
+
+    function addSubject() {
+      const v = document.getElementById('newSubject').value.trim();
+      if (!v) return alert('Enter subject');
+      if (appState.subjectNames.includes(v)) return alert('Subject exists');
+      appState.subjectNames.push(v);
+      appState.subjectTeachers[v] = appState.subjectTeachers[v] || [];
+      document.getElementById('newSubject').value = '';
+      redrawLists();
+    }
+
+    function addTeacher() {
+      const subj = document.getElementById('teacherSubject').value;
+      const name = document.getElementById('teacherName').value.trim();
+      const classes = parseInt(document.getElementById('teacherClasses').value) || 0;
+      if (!subj) return alert('Select subject');
+      if (!name) return alert('Enter teacher name');
+      if (!classes || classes <= 0) return alert('Enter classes/week (>=1)');
+      appState.subjectTeachers[subj] = appState.subjectTeachers[subj] || [];
+      appState.subjectTeachers[subj].push({ teacher: name, classesPerWeek: classes });
+      document.getElementById('teacherName').value = '';
+      document.getElementById('teacherClasses').value = '';
+      redrawLists();
+    }
+
+    function addTeacherMax() {
+      const t = document.getElementById('tmTeacher').value;
+      const m = parseInt(document.getElementById('tmMax').value);
+      if (!t || !m) return alert('Select teacher & max/day');
+      appState.teacherMax[t] = m;
+      document.getElementById('tmMax').value = '';
+      redrawLists();
+    }
+
+    function addFixed() {
+      const b = document.getElementById('fxBatch').value;
+      const d = parseInt(document.getElementById('fxDay').value);
+      const p = parseInt(document.getElementById('fxPeriod').value);
+      const s = document.getElementById('fxSubject').value.trim();
+      const r = document.getElementById('fxRoom').value.trim();
+      if (!b || !s || !p) return alert('Batch, subject, and period required');
+      appState.fixed.push({ batch: b, day: d, period: p, subject: s, room: r || null });
+      document.getElementById('fxPeriod').value = '';
+      document.getElementById('fxSubject').value = '';
+      document.getElementById('fxRoom').value = '';
+      redrawLists();
+    }
+
+    /* ---------- Sample reset ---------- */
+    function resetAll() {
+      appState.classrooms = ['Room 101', 'Room 102', 'Room 103'];
+      appState.batches = ['Batch A', 'Batch B', 'Batch C'];
+      appState.periodsPerDay = 6;
+      appState.subjectNames = ['Physics', 'Mathematics', 'Chemistry'];
+      appState.subjectTeachers = {
+        'Physics': [{ teacher: 'Mr P', classesPerWeek: 3 }],
+        'Mathematics': [{ teacher: 'Ms M', classesPerWeek: 4 }],
+        'Chemistry': [{ teacher: 'Mr C', classesPerWeek: 3 }]
+      };
+      appState.teacherMax = { 'Mr P': 3, 'Ms M': 4, 'Mr C': 3 };
+      appState.fixed = [];
+      redrawLists();
+    }
+
+    /* ---------- Assignment builder ---------- */
+    function getUniqueTeachers() {
+      const s = new Set();
+      Object.values(appState.subjectTeachers).flat().forEach(e => s.add(e.teacher));
+      return Array.from(s);
+    }
+
+    function buildAssignmentPerSubject() {
+      const assignment = {};
+      const warnings = [];
+      const nBatches = appState.batches.length;
+
+      for (const subj of appState.subjectNames) {
+        const arr = appState.subjectTeachers[subj] || [];
+        const teachers = arr.map(e => e.teacher);
+        assignment[subj] = {};
+
+        if (teachers.length === 0) {
+          warnings.push(`Subject "${subj}" has no teachers.`);
+          continue;
+        }
+
+        if (teachers.length >= nBatches) {
+          for (let i = 0; i < nBatches; i++) assignment[subj][appState.batches[i]] = teachers[i];
+          if (teachers.length > nBatches) warnings.push(`Subject "${subj}": more teachers than batches; some teachers unassigned.`);
+        } else {
+          for (let i = 0; i < nBatches; i++) assignment[subj][appState.batches[i]] = teachers[i % teachers.length];
+          if (teachers.length === 1) {
+            // ok
+          } else {
+            const rem = nBatches % teachers.length;
+            if (rem !== 0) warnings.push(`Subject "${subj}": uneven distribution between ${teachers.length} teachers and ${nBatches} batches.`);
+          }
+        }
+      }
+
+      return { assignment, warnings };
+    }
+
+    function buildOccurrencesPerBatch(assignment) {
+      const occ = {};
+      appState.batches.forEach(b => occ[b] = []);
+      for (const subj of appState.subjectNames) {
+        for (const b of appState.batches) {
+          const teacher = assignment[subj] ? assignment[subj][b] : null;
+          if (!teacher) continue;
+          const arr = appState.subjectTeachers[subj] || [];
+          const ent = arr.find(x => x.teacher === teacher);
+          const classes = ent ? (ent.classesPerWeek || 0) : 0;
+          for (let k = 0; k < classes; k++) occ[b].push({ subject: subj, teacher });
+        }
+      }
+      return occ;
+    }
+
+    /* ---------- CSP solver ---------- */
+    function enumerateSchedulesAsync(options = { maxSolutions: 60, timeLimitMs: 12000, yieldEvery: 5000 }) {
+      return new Promise((resolve, reject) => {
+
+        const startTime = performance.now();
+
+        const maxSolutions = options.maxSolutions || 60;
+        const timeLimitMs = options.timeLimitMs || 8000;
+        const yieldEvery = options.yieldEvery || 5000;
+
+        const { assignment, warnings } = buildAssignmentPerSubject();
+        const occurrencesPerBatch = buildOccurrencesPerBatch(assignment);
+
+        // Build list of occurrences to schedule
+        let occList = [];
+        let nextId = 0;
+        for (const b of appState.batches) {
+          (occurrencesPerBatch[b] || []).forEach(o => {
+            occList.push({ id: nextId++, batch: b, subject: o.subject, teacher: o.teacher });
+          });
+        }
+
+        const days = appState.days.length;
+        const periods = appState.periodsPerDay;
+        const rooms = appState.classrooms.length ? appState.classrooms.slice() : ['Room-Default'];
+        // Ensure deterministic order and prepare optional fixed batch->room mapping
+        rooms.sort();
+        const batchRoomMap = {};
+        let useFixedBatchRoom = false;
+        if (rooms.length >= appState.batches.length) {
+          useFixedBatchRoom = true;
+          // Assign first N rooms to batches in order (so each batch keeps the same room)
+          appState.batches.forEach((b, i) => { batchRoomMap[b] = rooms[i]; });
+        }
+
+        const schedule0 = {};
+        appState.batches.forEach(b => schedule0[b] = Array.from({ length: periods }, () => Array.from({ length: days }, () => null)));
+        const teacherOcc0 = {};
+        getUniqueTeachers().forEach(t => teacherOcc0[t] = Array.from({ length: days }, () => Array.from({ length: periods }, () => false)));
+        const roomOcc0 = {};
+        rooms.forEach(r => roomOcc0[r] = Array.from({ length: days }, () => Array.from({ length: periods }, () => false)));
+        const teacherDayCount0 = {};
+        getUniqueTeachers().forEach(t => teacherDayCount0[t] = Array.from({ length: days }, () => 0));
+
+        // apply fixed classes
+        for (const f of appState.fixed) {
+          const b = f.batch;
+          if (!schedule0[b]) return resolve({ solutions: [], warnings, error: `Fixed refers to unknown batch ${b}` });
+          const p = f.period - 1;
+          const d = f.day;
+          if (p < 0 || p >= periods) return resolve({ solutions: [], warnings, error: `Fixed period out of range: ${f.period}` });
+          const subj = f.subject;
+          const t = assignment[subj] ? assignment[subj][b] : null;
+          if (!t) return resolve({ solutions: [], warnings, error: `Fixed subject ${subj} has no assigned teacher for ${b}` });
+          const room = f.room || rooms[0];
+          if (!rooms.includes(room)) rooms.push(room);
+          schedule0[b][p][d] = { subject: subj, teacher: t, room, isFixed: true };
+          teacherOcc0[t][d][p] = true;
+          teacherDayCount0[t][d] += 1;
+          roomOcc0[room][d][p] = true;
+        }
+
+        const teacherMax = { ...appState.teacherMax };
+
+        function computeSlotsForOcc(occ, schedule, teacherOcc, roomOcc, teacherDayCount) {
+          const slots = [];
+          for (let d = 0; d < days; d++) {
+            const maxDay = teacherMax[occ.teacher] || periods;
+            if (teacherDayCount[occ.teacher] && teacherDayCount[occ.teacher][d] >= maxDay) continue;
+            for (let p = 0; p < periods; p++) {
+              if (schedule[occ.batch][p][d]) continue;
+              if (teacherOcc[occ.teacher][d][p]) continue;
+              if (useFixedBatchRoom && batchRoomMap[occ.batch]) {
+                const r = batchRoomMap[occ.batch];
+                if (!roomOcc[r][d][p]) { slots.push({ d, p, r }); }
+              } else {
+                for (const r of rooms) {
+                  if (!roomOcc[r][d][p]) { slots.push({ d, p, r }); break; }
+                }
+              }
+            }
+          }
+          return slots;
+        }
+
+        function pickNextOcc(remaining, schedule, teacherOcc, roomOcc, teacherDayCount) {
+          let best = null;
+          let bestSlots = null;
+          let bestCount = Infinity;
+
+          for (const occ of remaining) {
+            const s = computeSlotsForOcc(occ, schedule, teacherOcc, roomOcc, teacherDayCount);
+            const cnt = s.length;
+            if (cnt < bestCount) {
+              bestCount = cnt;
+              best = occ;
+              bestSlots = s;
+              if (cnt === 0) break;
+            }
+          }
+          return { occ: best, slots: bestSlots, count: bestCount };
+        }
+
+        function scoreSchedule(schedule) {
+          const teachers = getUniqueTeachers();
+          const weeklyLoad = {};
+          teachers.forEach(t => weeklyLoad[t] = 0);
+          const dailyLoads = {};
+          teachers.forEach(t => dailyLoads[t] = Array.from({ length: days }, () => 0));
+
+          for (const b of appState.batches) {
+            for (let p = 0; p < periods; p++) {
+              for (let d = 0; d < days; d++) {
+                const c = schedule[b][p][d];
+                if (c && c.teacher) {
+                  weeklyLoad[c.teacher] += 1;
+                  dailyLoads[c.teacher][d] += 1;
+                }
+              }
+            }
+          }
+
+          const loads = Object.values(weeklyLoad);
+          const mean = loads.reduce((a, b) => a + b, 0) / Math.max(1, loads.length);
+          const variance = loads.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, loads.length);
+
+          let dailyPenalty = 0;
+          let consecutivePenalty = 0;
+
+          teachers.forEach(t => {
+            const arr = dailyLoads[t];
+            arr.forEach(x => {
+              const maxDay = teacherMax[t] || periods;
+              if (x > maxDay) dailyPenalty += (x - maxDay) * 5;
+            });
+
+            for (let d = 0; d < days; d++) {
+              let consec = 0;
+              for (let p = 0; p < periods; p++) {
+                let has = false;
+                for (const b of appState.batches) {
+                  const c = schedule[b][p][d];
+                  if (c && c.teacher === t) { has = true; break; }
+                }
+                if (has) consec++; else { if (consec > 1) consecutivePenalty += (consec - 1); consec = 0; }
+              }
+            }
+          });
+
+          return variance * 1.5 + dailyPenalty * 2 + consecutivePenalty * 1.2;
+        }
+
+        const solutionsFound = [];
+        let ops = 0;
+
+        rooms.sort(); // deterministic
+
+        function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+        const initialFrame = {
+          remaining: occList.slice(),
+          schedule: deepCopy(schedule0),
+          teacherOcc: deepCopy(teacherOcc0),
+          roomOcc: deepCopy(roomOcc0),
+          teacherDayCount: deepCopy(teacherDayCount0),
+          choiceOcc: null,
+          choiceSlots: null,
+          slotIndex: 0
+        };
+
+        const stack = [initialFrame];
+
+        async function stepLoop() {
+          while (stack.length > 0) {
+            if (performance.now() - startTime > timeLimitMs) break;
+            if (solutionsFound.length >= maxSolutions) break;
+
+            const frame = stack[stack.length - 1];
+            const rem = frame.remaining;
+
+            if (rem.length === 0) {
+              const scheduleCopy = deepCopy(frame.schedule);
+              const score = scoreSchedule(scheduleCopy);
+              solutionsFound.push({ schedule: scheduleCopy, score });
+              updateProgress(solutionsFound.length);
+              stack.pop();
+              continue;
+            }
+
+            if (!frame.choiceOcc) {
+              const pick = pickNextOcc(rem, frame.schedule, frame.teacherOcc, frame.roomOcc, frame.teacherDayCount);
+              if (!pick.occ) { stack.pop(); continue; }
+              frame.choiceOcc = pick.occ;
+
+              const fullSlots = [];
+              for (let d = 0; d < days; d++) {
+                const maxDay = teacherMax[frame.choiceOcc.teacher] || periods;
+                if (frame.teacherDayCount[frame.choiceOcc.teacher] && frame.teacherDayCount[frame.choiceOcc.teacher][d] >= maxDay) continue;
+                for (let p = 0; p < periods; p++) {
+                  if (frame.schedule[frame.choiceOcc.batch][p][d]) continue;
+                  if (frame.teacherOcc[frame.choiceOcc.teacher][d][p]) continue;
+                  if (useFixedBatchRoom && batchRoomMap[frame.choiceOcc.batch]) {
+                    const r = batchRoomMap[frame.choiceOcc.batch];
+                    if (!frame.roomOcc[r][d][p]) {
+                      fullSlots.push({ d, p, r });
+                    }
+                  } else {
+                    for (const r of rooms) {
+                      if (!frame.roomOcc[r][d][p]) {
+                        fullSlots.push({ d, p, r });
+                      }
+                    }
+                  }
+                }
+              }
+fullSlots.sort((a, b) => a.d - b.d || a.p - b.p || (a.r || '').localeCompare(b.r || ''));
+              frame.choiceSlots = fullSlots;
+              frame.slotIndex = 0;
+
+              if (frame.choiceSlots.length === 0) { stack.pop(); continue; }
+            }
+
+            if (frame.slotIndex >= frame.choiceSlots.length) {
+              stack.pop();
+              continue;
+            }
+
+            const slot = frame.choiceSlots[frame.slotIndex++];
+
+            frame.schedule[frame.choiceOcc.batch][slot.p][slot.d] = {
+              subject: frame.choiceOcc.subject,
+              teacher: frame.choiceOcc.teacher,
+              room: slot.r,
+              isFixed: false
+            };
+
+            frame.teacherOcc[frame.choiceOcc.teacher][slot.d][slot.p] = true;
+            frame.roomOcc[slot.r][slot.d][slot.p] = true;
+            frame.teacherDayCount[frame.choiceOcc.teacher][slot.d] = (frame.teacherDayCount[frame.choiceOcc.teacher][slot.d] || 0) + 1;
+
+            const idx = frame.remaining.findIndex(x => x.id === frame.choiceOcc.id);
+            const newRemaining = frame.remaining.slice(0, idx).concat(frame.remaining.slice(idx + 1));
+
+            const newFrame = {
+              remaining: newRemaining,
+              schedule: deepCopy(frame.schedule),
+              teacherOcc: deepCopy(frame.teacherOcc),
+              roomOcc: deepCopy(frame.roomOcc),
+              teacherDayCount: deepCopy(frame.teacherDayCount),
+              choiceOcc: null,
+              choiceSlots: null,
+              slotIndex: 0
+            };
+
+            stack.push(newFrame);
+
+            frame.schedule[frame.choiceOcc.batch][slot.p][slot.d] = null;
+            frame.teacherOcc[frame.choiceOcc.teacher][slot.d][slot.p] = false;
+            frame.roomOcc[slot.r][slot.d][slot.p] = false;
+            frame.teacherDayCount[frame.choiceOcc.teacher][slot.d] -= 1;
+
+            ops++;
+            if (ops % yieldEvery === 0) {
+              updateProgress(solutionsFound.length);
+              await new Promise(r => setTimeout(r, 0));
+              if (performance.now() - startTime > timeLimitMs) break;
+            }
+          }
+
+          solutionsFound.sort((a, b) => a.score - b.score);
+          resolve({ solutions: solutionsFound, warnings, timedOut: (performance.now() - startTime > timeLimitMs) });
+        }
+
+        stepLoop().catch(err => reject(err));
+      });
+    }
+
+    /* ---------- UI: progress ---------- */
+    function showLoading(on) {
+      const loading = document.getElementById('loadingArea');
+      loading.classList.toggle('hidden', !on);
+    }
+
+    function updateProgress(found) {
+      const txt = document.getElementById('progressText');
+      txt.innerText = `Found ${found} valid timetable${found === 1 ? '' : 's'} so far…`;
+    }
+
+    /* ---------- Generate & show ---------- */
+    async function generateAndShowTimetable() {
+      appState.periodsPerDay = parseInt(document.getElementById('periodsPerDay').value) || appState.periodsPerDay;
+
+      // Ensure every teacher has a daily max defined (required)
+      const allTeachers = getUniqueTeachers();
+      const missingMax = allTeachers.filter(t => !(t in appState.teacherMax));
+      if (missingMax.length > 0) {
+        return alert('Please define daily max for all teachers: ' + missingMax.join(', '));
+      }
+
+
+      if (appState.batches.length === 0) return alert('Add at least one batch');
+      if (appState.subjectNames.length === 0) return alert('Add at least one subject');
+
+      document.getElementById('option1Container').innerHTML = '';
+      document.getElementById('option2Container').innerHTML = '';
+      document.getElementById('option3Container').innerHTML = '';
+      document.getElementById('otherOptionsContainer').innerHTML = '';
+      document.getElementById('warningsArea').innerHTML = '';
+
+      showLoading(true);
+      updateProgress(0);
+      document.getElementById('showMoreBtn').classList.add('hidden');
+      document.getElementById('clearMoreBtn').classList.add('hidden');
+
+      appState.isSolving = true;
+      appState.__currentGenerationId = Date.now().toString(36) + '-' + Math.floor(Math.random() * 10000);
+      appState.solutions = [];
+
+      try {
+        const res = await enumerateSchedulesAsync({ maxSolutions: 80, timeLimitMs: 15000, yieldEvery: 1000 });
+
+        appState.isSolving = false;
+        showLoading(false);
+
+        if (res.error) {
+          document.getElementById('warningsArea').appendChild(el('div', { class: 'bad' }, res.error));
+          showPage('timetables');
+          return;
+        }
+
+        if (res.warnings && res.warnings.length) res.warnings.forEach(w => document.getElementById('warningsArea').appendChild(el('div', { class: 'notice' }, w)));
+
+        appState.solutions = res.solutions || [];
+        // If there are more classrooms than batches, show which classrooms will remain unused
+        try {
+          const roomsList = appState.classrooms.length ? appState.classrooms.slice() : ['Room-Default'];
+          roomsList.sort();
+          if (roomsList.length > appState.batches.length) {
+            const unused = roomsList.slice(appState.batches.length);
+            if (unused.length > 0) {
+              const msg = document.createElement('div');
+              msg.className = 'notice';
+              msg.innerText = 'The following classrooms will remain unused for this timetable: ' + unused.join(', ');
+              document.getElementById('warningsArea').appendChild(msg);
+            }
+          }
+        } catch (e) { console.error('Failed to add unused-rooms notice', e); }
+
+
+        if (!appState.solutions || appState.solutions.length === 0) {
+          const msg = res.timedOut ? 'No complete solutions found within time limit. Try relaxing constraints (add rooms/teachers).' : 'No valid solutions found. Check constraints.';
+          document.getElementById('warningsArea').appendChild(el('div', { class: 'bad' }, msg));
+          showPage('timetables');
+          return;
+        }
+
+        document.getElementById('currentGenInfo').innerText = `Generation ${new Date().toLocaleString()}`;
+        appState.shownCount = 0;
+        showPage('timetables');
+        renderNextSolutionsBatch();
+
+      } catch (err) {
+        appState.isSolving = false;
+        showLoading(false);
+        console.error(err);
+        alert('Solver failed: ' + (err && err.message ? err.message : err));
+      }
+    }
+
+    /* ---------- Render solutions ---------- */
+    function renderSolutionIntoContainer(solIdx, containerId, title) {
+      const sol = appState.solutions[solIdx];
+      if (!sol) return;
+
+      const container = document.getElementById(containerId);
+
+      const userSaved = appState.currentUser ? loadFinalizedForUser(appState.currentUser.username) : [];
+      const existing = userSaved.find(x => x.generationId === appState.__currentGenerationId);
+
+      const block = el('div', { class: 'timetable-block' });
+      block.appendChild(el('h3', {}, title));
+
+      appState.batches.forEach(b => {
+        const batchBlock = el('div', { class: 'timetable-block' });
+        batchBlock.appendChild(el('strong', {}, `Batch: ${b}`));
+
+        const wrap = el('div', { class: 'table-wrap' });
+        const table = el('table');
+
+        // header
+        const thead = el('tr', {});
+        thead.appendChild(el('th', {}, 'Day / Period'));
+        for (let p = 0; p < appState.periodsPerDay; p++) {
+          thead.appendChild(el('th', {}, 'P' + (p + 1)));
+        }
+        table.appendChild(thead);
+
+        // rows
+        for (let d = 0; d < appState.days.length; d++) {
+          const tr = el('tr');
+          tr.appendChild(el('td', {}, appState.days[d]));
+          for (let p = 0; p < appState.periodsPerDay; p++) {
+            const cell = sol.schedule[b][p][d];
+            if (!cell) {
+              tr.appendChild(el('td', {}, ''));
+            } else {
+              const txt = `${cell.subject}${cell.room ? (' • ' + cell.room) : ''}${cell.teacher ? (' • ' + cell.teacher) : ''}`;
+              const td = el('td', {}, txt);
+              if (cell.isFixed) {
+                td.appendChild(el('div', { style: 'margin-top:6px;display:inline-block;padding:4px 6px;border-radius:6px;background:#fff7ed;color:#92400e;font-size:12px' }, 'Fixed'));
+              }
+              tr.appendChild(td);
+            }
+          }
+          table.appendChild(tr);
+        }
+
+        wrap.appendChild(table);
+        batchBlock.appendChild(wrap);
+
+        const ctrl = el('div', { style: 'margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap' });
+
+        const batchPdfBtn = el('button', { class: 'pdf-btn', onclick: () => downloadPDFForElement(batchBlock, `Timetable_${b}_sol${solIdx}`) }, 'Download PDF');
+
+        if (existing && existing.title === title) {
+          batchPdfBtn.className = 'finalized-batch-download';
+          // shade only the timetable table(s)
+          try { table.classList.add('finalized-table'); } catch (e) {}
+          // keep buttons active & bright (do not shade entire block)
+        }
+
+        ctrl.appendChild(batchPdfBtn);
+        batchBlock.appendChild(ctrl);
+        block.appendChild(batchBlock);
+      });
+
+      const overall = el('div', { style: 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end' });
+
+      overall.appendChild(el('button', { class: 'downloadAll-btn', onclick: () => downloadAllForSolution(sol, `Timetable_All_${title.replace(/\s+/g, '_')}`) }, 'Download All (single page)'));
+
+      const userSavedList = appState.currentUser ? loadFinalizedForUser(appState.currentUser.username) : [];
+      const exist = userSavedList.find(x => x.generationId === appState.__currentGenerationId);
+
+      if (exist && exist.title === title) {
+        overall.appendChild(el('button', { class: 'remove-finalize-btn', onclick: () => handleRemoveFinalize(solIdx, appState.__currentGenerationId, title) }, 'Remove Finalize'));
+      } else {
+        overall.appendChild(el('button', { class: 'finalize-btn', onclick: () => handleFinalize(solIdx, appState.__currentGenerationId, title) }, 'Finalize this Timetable'));
+      }
+
+      block.appendChild(overall);
+
+      container.appendChild(block);
+    }
+
+    function renderNextSolutionsBatch() {
+      const toRender = Math.min(3, appState.solutions.length - appState.shownCount);
+      if (toRender <= 0) return;
+
+      for (let i = 0; i < toRender; i++) {
+        const idx = appState.shownCount + i;
+        const title = `Option ${idx + 1}`;
+        if (idx < 3) {
+          const target = (idx === 0) ? 'option1Container' : (idx === 1) ? 'option2Container' : 'option3Container';
+          renderSolutionIntoContainer(idx, target, title);
+        } else {
+          renderSolutionIntoContainer(idx, 'otherOptionsContainer', title);
+        }
+      }
+
+      appState.shownCount += toRender;
+
+      document.getElementById('showMoreBtn').classList.toggle('hidden', appState.shownCount >= appState.solutions.length);
+      document.getElementById('clearMoreBtn').classList.toggle('hidden', appState.shownCount <= 3);
+
+      
+    }
+
+    
+
+
+function showMoreOptions() {
+  if (appState.isSolving) return alert('Solver still running');
+  try {
+    // If a finalized schedule was opened from saved timetables and we haven't yet
+    // shown the generated options, show the first 3 generated options starting
+    // from the first solution (Option 1 → Option 3) into the remaining containers
+    // so the finalized schedule remains visible in option1Container.
+    if (typeof appState.finalizedIndex !== 'undefined' && appState.finalizedIndex !== null && !appState._finalizedShowMoreUsed) {
+      const sols = appState.solutions || [];
+      let rendered = 0;
+      for (let i = 0; i < sols.length && rendered < 3; i++) {
+        const target = (rendered === 0) ? 'option2Container' : (rendered === 1) ? 'option3Container' : 'otherOptionsContainer';
+        try { renderSolutionIntoContainer(i, target, `Option ${i+1}`); } catch (err) { console.error('renderSolutionIntoContainer error', err); }
+        rendered++;
+      }
+      appState.shownCount = rendered;
+      appState._finalizedShowMoreUsed = true;
+      const total = sols.length || 0;
+      document.getElementById('showMoreBtn').classList.toggle('hidden', appState.shownCount >= total);
+      document.getElementById('clearMoreBtn').classList.toggle('hidden', appState.shownCount <= 3);
+      return;
+    }
+  } catch (e) { console.error('showMoreOptions patched error', e); }
+
+  // default behavior: paginate normally
+  renderNextSolutionsBatch();
+}
+function clearExtraOptions() {
+      document.getElementById('otherOptionsContainer').innerHTML = '';
+      appState.shownCount = Math.min(3, appState.solutions.length);
+      document.getElementById('clearMoreBtn').classList.add('hidden');
+      document.getElementById('showMoreBtn').classList.toggle('hidden', appState.shownCount >= appState.solutions.length);
+      document.getElementById('option1Container').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /* ---------- Finalize ---------- */
+    function handleFinalize(solIdx, generationId, title) {
+      if (!appState.currentUser) return alert('Please login to finalize timetables');
+      const sol = appState.solutions[solIdx];
+      if (!sol) return alert('Solution not found');
+
+      const username = appState.currentUser.username;
+      let arr = loadFinalizedForUser(username);
+
+      const existingIdx = arr.findIndex(x => x.generationId === generationId);
+      if (existingIdx !== -1) {
+        if (!confirm('A finalized timetable already exists from this generation. Replace it with this one?')) return;
+        arr.splice(existingIdx, 1);
+      }
+
+      const entry = {
+        id: 'ft-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 10000),
+        generationId: generationId || null,
+        title: title || ('Finalized timetable'),
+        schedule: sol.schedule,
+        meta: { createdAt: new Date().toLocaleString() }
+      };
+
+      arr.push(entry);
+      saveFinalizedForUser(username, arr);
+
+      renderSidebar();
+      renderDashboard();
+
+      alert('Finalized timetable saved in your saved timetables.');
+
+      // prevent showPage scroll during finalize -> restore shortly after
+      window.__suppressShowPageScroll = true;
+      try { renderCurrentGeneration(); } finally { setTimeout(function(){ window.__suppressShowPageScroll = false; }, 40); }
+    }
+
+    
+    
+
+    
+    function handleRemoveFinalize(solIdx, generationId, title) {
+      if (!appState.currentUser) return alert('Please login to remove finalized timetables');
+      const username = appState.currentUser.username;
+      let arr = loadFinalizedForUser(username) || [];
+      const sol = appState.solutions[solIdx];
+      let idx = arr.findIndex(x => (generationId && x.generationId === generationId) || (sol && x.schedule && JSON.stringify(x.schedule) === JSON.stringify(sol.schedule)));
+      if (idx === -1) {
+        // fallback: try to find by title
+        idx = arr.findIndex(x => x.title === title);
+      }
+      if (idx === -1) return alert('No finalized timetable found to remove.');
+      arr.splice(idx, 1);
+      saveFinalizedForUser(username, arr);
+      renderSidebar();
+      renderDashboard();
+      alert('Removed finalized timetable.');
+      // re-render current generation to reflect changes
+      window.__suppressShowPageScroll = true;
+      try { renderCurrentGeneration(); } finally { setTimeout(function(){ window.__suppressShowPageScroll = false; }, 40); }
+    }
+
+    function renderCurrentGeneration() {
+      // Preserve previously shown solutions (default to 3 if none)
+      const prevShown = (typeof appState.shownCount === 'number' && appState.shownCount > 0) ? appState.shownCount : Math.min(3, appState.solutions.length);
+      document.getElementById('option1Container').innerHTML = '';
+      document.getElementById('option2Container').innerHTML = '';
+      document.getElementById('option3Container').innerHTML = '';
+      document.getElementById('otherOptionsContainer').innerHTML = '';
+      document.getElementById('currentGenInfo').innerText = appState.__currentGenerationId ? `Generation ${new Date().toLocaleString()}` : '';
+      const toRender = Math.min(prevShown, appState.solutions.length);
+      for (let idx = 0; idx < toRender; idx++) {
+        const title = `Option ${idx + 1}`;
+        const target = (idx === 0) ? 'option1Container' : (idx === 1) ? 'option2Container' : (idx === 2) ? 'option3Container' : 'otherOptionsContainer';
+        renderSolutionIntoContainer(idx, target, title);
+      }
+      appState.shownCount = toRender;
+      document.getElementById('showMoreBtn').classList.toggle('hidden', appState.shownCount >= appState.solutions.length);
+      document.getElementById('clearMoreBtn').classList.toggle('hidden', appState.shownCount <= 3);
+      showPage('timetables');
+    }
+
+    /* ---------- Load finalized ---------- */
+    
+/* Helper to toggle Show More visibility depending on whether schedule is temporary */
+function setShowMoreForSchedule(schedule) {
+  try {
+    const showMoreBtn = document.getElementById('showMoreBtn');
+    const clearMoreBtn = document.getElementById('clearMoreBtn');
+    if (!showMoreBtn || !clearMoreBtn) return;
+    const isTemp = schedule && schedule.id && String(schedule.id).startsWith('temp-');
+    if (isTemp) {
+      showMoreBtn.classList.add('hidden');
+      clearMoreBtn.classList.add('hidden');
+    } else {
+      // default behavior: keep as per existing logic
+      showMoreBtn.classList.toggle('hidden', appState.shownCount >= (appState.solutions ? appState.solutions.length : 0));
+      clearMoreBtn.classList.toggle('hidden', appState.shownCount <= 3);
+    }
+  } catch (e) { console.error('setShowMoreForSchedule error', e); }
+}
+function loadFinalizedIntoMain(f) {
+      document.getElementById('option1Container').innerHTML = '';
+      document.getElementById('option2Container').innerHTML = '';
+      document.getElementById('option3Container').innerHTML = '';
+      document.getElementById('otherOptionsContainer').innerHTML = '';
+
+      document.getElementById('currentGenInfo').innerText = 'Viewing saved timetable — ' + (f.meta && f.meta.createdAt ? f.meta.createdAt : '');
+
+      const container = document.getElementById('option1Container');
+
+      const block = el('div', { class: 'timetable-block' });
+      block.appendChild(el('h3', {}, f.title + ' (Finalized)'));
+
+      appState.batches.forEach(b => {
+        const batchBlock = el('div', { class: 'timetable-block' });
+        batchBlock.appendChild(el('strong', {}, `Batch: ${b}`));
+
+        const wrap = el('div', { class: 'table-wrap' });
+        const table = el('table');
+
+        const thead = el('tr', {});
+        thead.appendChild(el('th', {}, 'Day / Period'));
+        for (let p = 0; p < appState.periodsPerDay; p++) thead.appendChild(el('th', {}, 'P' + (p + 1)));
+        table.appendChild(thead);
+
+        for (let d = 0; d < appState.days.length; d++) {
+          const tr = el('tr');
+          tr.appendChild(el('td', {}, appState.days[d]));
+          for (let p = 0; p < appState.periodsPerDay; p++) {
+            const cell = (f.schedule && f.schedule[b] && f.schedule[b][p]) ? f.schedule[b][p][d] : null;
+            if (!cell) tr.appendChild(el('td', {}, ''));
+            else {
+              const txt = `${cell.subject}${cell.room ? (' • ' + cell.room) : ''}${cell.teacher ? (' • ' + cell.teacher) : ''}`;
+              const td = el('td', {}, txt);
+              if (cell.isFixed) td.appendChild(el('div', { style: 'margin-top:6px;display:inline-block;padding:4px 6px;border-radius:6px;background:#fff7ed;color:#92400e;font-size:12px' }, 'Fixed'));
+              tr.appendChild(td);
+            }
+          }
+          table.appendChild(tr);
+        }
+
+        wrap.appendChild(table);
+        // Shade only the timetable grid(s) — keep controls/buttons bright
+        try { table.classList.add('finalized-table'); } catch(e){}
+        batchBlock.appendChild(wrap);
+
+        batchBlock.appendChild(el('div', { style: 'margin-top:8px' },
+          el('button', { class: 'finalized-batch-download', onclick: () => downloadPDFForElement(batchBlock, `Finalized_${b}_${f.id}`) }, 'Download PDF')
+        ));
+
+        container.appendChild(batchBlock);
+      });
+
+      block.appendChild(el('div', { style: 'margin-top:10px;display:flex;gap:8px;justify-content:flex-end' },
+        el('button', { class: 'downloadAll-btn', onclick: () => downloadAllForSchedule(f.schedule, `Finalized_All_${f.id}`) }, 'Download All (single page)')      , el('button', { class: 'btn-ghost', onclick: () => openAbsenceModalFromFinalized(f) }, 'Handle Absence')
+      ));
+
+      if (appState.__currentGenerationId) {
+        block.appendChild(el('div', { style: 'margin-top:10px' },
+          el('button', { class: 'btn-ghost', onclick: () => renderCurrentGeneration() }, 'Back to current generation')
+        ));
+      }
+
+      container.appendChild(block);
+
+      // --- patch: ensure Show More reveals options from the start, skipping the finalized one if present ---
+      try {
+        if (!appState) appState = {};
+        if (!Array.isArray(appState.solutions)) appState.solutions = [];
+        appState.shownCount = 0;
+        appState._renderedSet = new Set();
+        appState._lastOpenedIsTemp = (f && f.id && String(f.id).startsWith('temp-'));
+        // try to detect which solution index in current generation matches this finalized schedule (if available)
+        try {
+          let finalizedIndex = null;
+          if (appState.solutions && appState.solutions.length && f && f.schedule) {
+            for (let i = 0; i < appState.solutions.length; i++) {
+              try {
+                if (JSON.stringify(appState.solutions[i].schedule) === JSON.stringify(f.schedule)) { finalizedIndex = i; break; }
+              } catch(e){}
+            }
+          }
+          if (finalizedIndex !== null) {
+            appState.finalizedIndex = finalizedIndex;
+            appState._renderedSet.add(finalizedIndex);
+          } else {
+            appState.finalizedIndex = null;
+          }
+        } catch(e){}
+        // ensure Show More / Clear buttons reflect current solutions state
+        try {
+          if (f && f.id && String(f.id).startsWith('temp-')) { document.getElementById('showMoreBtn').classList.add('hidden'); document.getElementById('clearMoreBtn').classList.add('hidden'); } else { document.getElementById('showMoreBtn').classList.toggle('hidden', appState.shownCount >= (appState.solutions ? appState.solutions.length : 0)); document.getElementById('clearMoreBtn').classList.toggle('hidden', appState.shownCount <= 3); } } catch(e){}
+      } catch(e){ console.error('loadFinalizedIntoMain patch error', e); }
+
+// ensure show more/clear buttons always reflect available solutions
+try {
+  if (!appState) appState = {};
+  if (!appState.solutions) appState.solutions = []; appState.shownCount = Math.min(3, appState.solutions.length); if (appState._lastOpenedIsTemp) { document.getElementById('showMoreBtn').classList.add('hidden'); document.getElementById('clearMoreBtn').classList.add('hidden'); } else { document.getElementById('showMoreBtn').classList.toggle('hidden', appState.shownCount >= appState.solutions.length); document.getElementById('clearMoreBtn').classList.toggle('hidden', appState.shownCount <= 3); } } catch(e) { console.error("Show More patch error", e); }
+showPage('timetables');
+    }
+
+    /* ---------- PDF helpers ---------- */
+    
+    async function downloadPDFForElement(elementWrap, filenameBase) {
+      try {
+        // clone only the table-wrap to avoid capturing buttons
+        const tableWrap = elementWrap.querySelector('.table-wrap') ? elementWrap.querySelector('.table-wrap') : elementWrap;
+        const clone = tableWrap.cloneNode(true);
+        // remove any finalized shading inside clone before capture so PDF is bright
+        try { clone.querySelectorAll('.finalized-block').forEach(n => n.classList.remove('finalized-block')); } catch(e){}
+        try { clone.querySelectorAll('.finalized-table').forEach(n => n.classList.remove('finalized-table')); } catch(e){}
+        clone.style.boxShadow = 'none';
+        clone.style.transform = 'none';
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        clone.style.top = '0';
+
+        const originalWrap = elementWrap.querySelector('.table-wrap') || elementWrap;
+        const scrollW = Math.max(originalWrap.scrollWidth || originalWrap.offsetWidth, originalWrap.offsetWidth);
+        const scrollH = Math.max(originalWrap.scrollHeight || originalWrap.offsetHeight, originalWrap.offsetHeight);
+
+        // add a small padding to avoid cutting last row and ensure full width captured
+        clone.style.width = (scrollW + 20) + 'px';
+        clone.style.height = (scrollH + 20) + 'px';
+        clone.style.paddingBottom = '16px';
+        clone.style.overflow = 'visible';
+
+        document.body.appendChild(clone);
+
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+        const scale = isMobile ? 3 : 2;
+
+        const canvas = await html2canvas(clone, { scale, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: clone.scrollWidth, windowHeight: clone.scrollHeight });
+
+        document.body.removeChild(clone);
+
+        const imgData = canvas.toDataURL('image/png');
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
+
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+
+        const margin = 14;
+        const usableW = pageW - margin * 2;
+        const usableH = pageH - margin * 2;
+
+        const imgW = canvas.width;
+        const imgH = canvas.height;
+
+        const fitRatio = Math.min(usableW / imgW, usableH / imgH);
+        const drawW = imgW * fitRatio;
+        const drawH = imgH * fitRatio;
+        const x = (pageW - drawW) / 2;
+        const y = (pageH - drawH) / 2;
+
+        if (drawH <= usableH + 0.5) {
+          // fits on one page
+          pdf.addImage(imgData, 'PNG', x, y, drawW, drawH);
+        } else {
+          // slice vertically into pages — use ceil to avoid cutting last row
+          const tmp = document.createElement('canvas');
+          const tctx = tmp.getContext('2d');
+          const sliceHpx = Math.max(1, Math.ceil(usableH / fitRatio));
+          let yOffset = 0;
+          let pageIndex = 0;
+          while (yOffset < imgH) {
+            const h = Math.min(sliceHpx, imgH - yOffset);
+            tmp.width = imgW;
+            tmp.height = h;
+            tctx.clearRect(0,0,tmp.width,tmp.height);
+            tctx.drawImage(canvas, 0, yOffset, imgW, h, 0, 0, imgW, h);
+            const partData = tmp.toDataURL('image/png');
+            const partDrawH = h * fitRatio;
+            const partDrawW = imgW * fitRatio;
+            const partX = (pageW - partDrawW) / 2;
+            const partY = (pageH - partDrawH) / 2;
+            if (pageIndex > 0) pdf.addPage();
+            pdf.addImage(partData, 'PNG', partX, partY, partDrawW, partDrawH);
+            yOffset += h;
+            pageIndex++;
+          }
+        }
+
+        pdf.save(filenameBase + '.pdf');
+      } catch (err) {
+        console.error('downloadPDFForElement error', err);
+        alert('Failed to generate PDF: ' + (err && err.message ? err.message : err));
+      }
+    }
+    
+
+    async function downloadAllForSolution(sol, filenameBase) {
+      const tmpWrapper = document.createElement('div');
+      tmpWrapper.style.background = '#ffffff';
+      tmpWrapper.style.padding = '12px';
+      tmpWrapper.style.boxSizing = 'border-box';
+      tmpWrapper.style.width = '1200px';
+
+      appState.batches.forEach(b => {
+        const batchBlock = document.createElement('div');
+        batchBlock.style.marginBottom = '18px';
+        const title = document.createElement('div');
+        title.style.fontWeight = '700';
+        title.style.marginBottom = '6px';
+        title.innerText = `Batch: ${b}`;
+        batchBlock.appendChild(title);
+
+        const wrap = document.createElement('div');
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+
+        const thead = document.createElement('tr');
+        const th0 = document.createElement('th');
+        th0.innerText = 'Day / Period';
+        th0.style.border = '1px solid #e6eef6';
+        th0.style.padding = '8px';
+        thead.appendChild(th0);
+
+        for (let p = 0; p < appState.periodsPerDay; p++) {
+          const th = document.createElement('th');
+          th.innerText = 'P' + (p + 1);
+          th.style.border = '1px solid #e6eef6';
+          th.style.padding = '8px';
+          thead.appendChild(th);
+        }
+
+        table.appendChild(thead);
+
+        for (let d = 0; d < appState.days.length; d++) {
+          const tr = document.createElement('tr');
+          const td0 = document.createElement('td');
+          td0.innerText = appState.days[d];
+          td0.style.border = '1px solid #e6eef6';
+          td0.style.padding = '8px';
+          tr.appendChild(td0);
+
+          for (let p = 0; p < appState.periodsPerDay; p++) {
+            const td = document.createElement('td');
+            td.style.border = '1px solid #e6eef6';
+            td.style.padding = '8px';
+            const cell = sol.schedule[b][p][d];
+            td.innerText = cell ? `${cell.subject}${cell.room ? (' • ' + cell.room) : ''}${cell.teacher ? (' • ' + cell.teacher) : ''}` : '';
+            tr.appendChild(td);
+          }
+          table.appendChild(tr);
+        }
+
+        wrap.appendChild(table);
+        batchBlock.appendChild(wrap);
+        tmpWrapper.appendChild(batchBlock);
+      });
+
+      try {
+        tmpWrapper.style.position = 'absolute';
+        tmpWrapper.style.left = '-9999px';
+        document.body.appendChild(tmpWrapper);
+
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+        const scale = isMobile ? 3 : 2;
+        const canvas = await html2canvas(tmpWrapper, { scale, useCORS: true, backgroundColor: '#ffffff' });
+
+        document.body.removeChild(tmpWrapper);
+
+        const imgData = canvas.toDataURL('image/png');
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
+
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const margin = 14;
+        const usableW = pageW - margin * 2;
+        const usableH = pageH - margin * 2;
+        const imgW = canvas.width;
+        const imgH = canvas.height;
+        const fitRatio = Math.min(usableW / imgW, usableH / imgH);
+        const drawW = imgW * fitRatio;
+        const drawH = imgH * fitRatio;
+
+        if (drawH <= usableH + 1) {
+          pdf.addImage(imgData, 'PNG', (pageW - drawW) / 2, (pageH - drawH) / 2, drawW, drawH);
+          pdf.save(`${filenameBase}.pdf`);
+          return;
+        }
+
+        const sliceHpx = Math.floor(usableH / fitRatio);
+        let yOffset = 0;
+        let page = 0;
+
+        while (yOffset < imgH) {
+          const h = Math.min(sliceHpx, imgH - yOffset);
+          const tmp = document.createElement('canvas');
+          tmp.width = imgW;
+          tmp.height = h;
+          tmp.getContext('2d').drawImage(canvas, 0, yOffset, imgW, h, 0, 0, imgW, h);
+          const sliceData = tmp.toDataURL('image/png');
+          const sliceDrawH = h * fitRatio;
+          const sliceX = (pageW - drawW) / 2;
+          const sliceY = (pageH - sliceDrawH) / 2;
+          if (page > 0) pdf.addPage();
+          pdf.addImage(sliceData, 'PNG', sliceX, sliceY, drawW, sliceDrawH);
+          page++;
+          yOffset += h;
+        }
+
+        pdf.save(`${filenameBase}.pdf`);
+      } catch (err) {
+        console.error(err);
+        alert('Download all failed: ' + (err.message || err));
+      }
+    }
+
+    function downloadAllForSchedule(schedule, filenameBase) {
+      const sol = { schedule };
+      downloadAllForSolution(sol, filenameBase);
+    }
+
+    /* ---------- Preview modal ---------- */
+    function openPreviewModal() {
+      if (appState.subjectNames.length === 0 || appState.batches.length === 0) return alert('Add at least one subject and one batch before preview');
+
+      const { assignment, warnings } = buildAssignmentPerSubject();
+
+      const content = document.getElementById('previewContent');
+      content.innerHTML = '';
+
+      content.appendChild(el('h2', {}, 'Teacher → Batch Assignments'));
+
+      appState.subjectNames.forEach(subj => {
+        const block = el('div', { class: 'timetable-block' });
+        block.appendChild(el('strong', {}, subj));
+        const tbl = el('table');
+        tbl.appendChild(el('tr', {}, el('th', {}, 'Batch'), el('th', {}, 'Assigned Teacher')));
+        appState.batches.forEach(b => {
+          tbl.appendChild(el('tr', {}, el('td', {}, b), el('td', {}, (assignment[subj] && assignment[subj][b]) ? assignment[subj][b] : '-')));
+        });
+        block.appendChild(el('div', { class: 'table-wrap' }, tbl));
+        content.appendChild(block);
+      });
+
+      if (warnings && warnings.length) warnings.forEach(w => content.appendChild(el('div', { class: 'notice' }, w)));
+      else content.appendChild(el('div', { class: 'ok' }, 'Assignments look balanced.'));
+
+      document.getElementById('previewModal').classList.remove('hidden');
+    }
+
+    function closePreviewModal() {
+      document.getElementById('previewModal').classList.add('hidden');
+    }
+
+    function closePreviewModalOnBackdrop(e) {
+      if (e.target && e.target.id === 'previewModal') closePreviewModal();
+    }
+    /* ---------- Absence handling (temporary timetable) ---------- */
+    
+
+    
+
+    
+    
+
+    
+
+    
+
+
+
+    /* ---------- Navigation helpers ---------- */
+    function goToGenerate() {
+      resetAll();
+      redrawLists();
+      document.getElementById('sidebar').classList.remove('open');
+      showPage('requirements');
+    }
+
+    function goToDashboard() {
+      renderSidebar();
+      renderDashboard();
+      showPage('dashboard');
+    }
+
+    /* ---------- Hamburger toggle ---------- */
+    document.getElementById('hamburgerBtn').addEventListener('click', () => {
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('open');
+    });
+
+    document.querySelector('.main').addEventListener('click', () => {
+      const sb = document.getElementById('sidebar');
+      if (sb.classList.contains('open')) sb.classList.remove('open');
+    });
+
+    /* ---------- Expose functions to window (for inline handlers) ---------- */
+    window.doRegister = doRegister;
+    window.doLogin = doLogin;
+    window.doLogout = doLogout;
+    window.showPage = showPage;
+
+    window.addClassroom = addClassroom;
+    window.addBatch = addBatch;
+    window.addSubject = addSubject;
+    window.addTeacher = addTeacher;
+    window.addTeacherMax = addTeacherMax;
+    window.addFixed = addFixed;
+
+    window.resetAll = resetAll;
+    window.openPreviewModal = openPreviewModal;
+    window.closePreviewModal = closePreviewModal;
+    window.closePreviewModalOnBackdrop = closePreviewModalOnBackdrop;
+
+    window.generateAndShowTimetable = generateAndShowTimetable;
+    window.showMoreOptions = showMoreOptions;
+    window.clearExtraOptions = clearExtraOptions;
+
+    window.goToGenerate = goToGenerate;
+    window.goToDashboard = goToDashboard;
+
+    window.renderSidebar = renderSidebar;
+    window.renderDashboard = renderDashboard;
+    window.renderCurrentGeneration = renderCurrentGeneration;
+    window.loadFinalizedIntoMain = loadFinalizedIntoMain;
+    window.handleFinalize = handleFinalize;
+    window.downloadPDFForElement = downloadPDFForElement;
+    window.downloadAllForSolution = downloadAllForSolution;
+    window.downloadAllForSchedule = downloadAllForSchedule;
+    window.deleteSaved = deleteSaved;
+    window.redrawLists = redrawLists;
+    window.prepareSelects = prepareSelects;
+    window.renderSolutionIntoContainer = renderSolutionIntoContainer;
+
+    /* ---------- Initialization ---------- */
+    window.onload = function () {
+      resetAll();
+      redrawLists();
+
+      document.getElementById('helloName').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+
+      // Hide hamburger initially for login page (explicit)
+      document.getElementById('hamburgerBtn').style.display = 'none';
+
+      showPage('login');
+
+      renderSidebar();
+    };
+  
+    function goToRequirements() { showPage('requirements'); }
+    function goToDashboard() { showPage('dashboard'); }
+    function goToGenerate() { showPage('requirements'); }
+    
+
+
+
+/* ---------- Absence handling (temporary timetable) ---------- */
+function openAbsenceModalFromFinalized(f) {
+  // Accept either a finalized object with schedule or an id
+  try {
+    appState._absenceTarget = f;
+    const sel = document.getElementById('absenceTeacher');
+    if (!sel) { console.error('absenceTeacher select not found'); alert('Internal error: absence modal missing'); return; }
+    sel.innerHTML = '';
+    const names = new Set();
+    // determine absent list stored in meta (for temporary timetables)
+    const absentList = (f && f.meta && Array.isArray(f.meta.absentTeachers)) ? f.meta.absentTeachers.slice() : [];
+
+    if (f && f.schedule) {
+      // iterate over keys of schedule (covers saved timetables even if appState.batches is empty)
+      Object.keys(f.schedule).forEach(b => {
+        const grid = f.schedule[b] || [];
+        for (let p = 0; p < grid.length; p++) {
+          for (let d = 0; d < (grid[p] ? grid[p].length : 0); d++) {
+            const c = grid[p][d];
+            if (c && c.teacher && !absentList.includes(c.teacher)) names.add(c.teacher);
+          }
+        }
+      });
+    } else {
+      // Fallback: collect from appState if available
+      if (appState && appState.timetables) {
+        appState.timetables.forEach(t => {
+          try {
+            if (t && t.schedule) {
+              Object.keys(t.schedule).forEach(b => {
+                const grid = t.schedule[b] || [];
+                for (let p = 0; p < grid.length; p++) {
+                  for (let d = 0; d < (grid[p] ? grid[p].length : 0); d++) {
+                    const c = grid[p][d];
+                    if (c && c.teacher && !absentList.includes(c.teacher)) names.add(c.teacher);
+                  }
+                }
+              });
+            }
+          } catch(e) {}
+        });
+      }
+    }
+
+    const arr = Array.from(names).sort();
+    // populate select
+    sel.appendChild(document.createElement('option')).innerText = '-- select teacher --';
+    arr.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n;
+      opt.innerText = n;
+      sel.appendChild(opt);
+    });
+
+    // store the schedule being acted on to global for confirmAbsence to use
+    window.__absenceSchedule = f;
+    document.getElementById('absenceModal').classList.remove('hidden');
+  } catch (e) {
+    console.error('openAbsenceModalFromFinalized error', e);
+    alert('Failed to open absence modal: ' + (e && e.message ? e.message : e));
+  }
+}
+
+function openAbsenceModal(f) { return openAbsenceModalFromFinalized(f); }
+
+function closeAbsenceModal() {
+  const m = document.getElementById('absenceModal');
+  if (m) m.classList.add('hidden');
+}
+
+function closeAbsenceModalOnBackdrop(e) {
+  if (e && e.target && e.target.id === 'absenceModal') closeAbsenceModal();
+}
+
+function isTeacherBusyInSchedule(schedule, teacher, dayIdx, periodIdx) {
+  if (!schedule) return false;
+  const batches = Object.keys(schedule);
+  for (const b of batches) {
+    const cell = schedule[b] && schedule[b][periodIdx] ? schedule[b][periodIdx][dayIdx] : null;
+    if (cell && cell.teacher === teacher) return true;
+  }
+  return false;
+}
+
+function confirmAbsence() {
+  try {
+    const teacherSel = document.getElementById('absenceTeacher');
+    const dateInp = document.getElementById('absenceDate');
+    const periodInp = document.getElementById('absencePeriod');
+    const selectedTeacher = teacherSel ? teacherSel.value : '';
+    const dateStr = dateInp ? dateInp.value : '';
+    const fromPeriod = parseInt(document.getElementById('absencePeriod').value, 10) || 1;
+  const toPeriodInp = document.getElementById('absenceToPeriod');
+  const toPeriod = toPeriodInp ? parseInt(toPeriodInp.value, 10) || null : null;
+
+    if (!selectedTeacher || !dateStr || !fromPeriod) return alert('Please select teacher, date and from period');
+
+    const f = window.__absenceSchedule || appState._absenceTarget;
+    if (!f || !f.schedule) return alert('No timetable selected');
+
+    const schedule = JSON.parse(JSON.stringify(f.schedule));
+    const baseMeta = (f.meta && typeof f.meta === 'object') ? JSON.parse(JSON.stringify(f.meta)) : {};
+    baseMeta.absentTeachers = baseMeta.absentTeachers || [];
+
+    const dt = new Date(dateStr + 'T00:00:00');
+    if (isNaN(dt.getTime())) return alert('Invalid date');
+    const jsDay = dt.getDay();
+    const dayIdx = (jsDay + 6) % 7;
+    if (dayIdx < 0 || dayIdx >= appState.days.length) return alert('Selected date is not within timetable days');
+
+    const teacherBatchSubjects = {};
+    const teacherSubjects = {};
+    const teacherBatches = {};
+    Object.keys(schedule).forEach(batch => {
+      for (let p = 0; p < schedule[batch].length; p++) {
+        for (let d = 0; d < schedule[batch][p].length; d++) {
+          const cell = schedule[batch][p][d];
+          if (!cell || !cell.teacher) continue;
+          const t = cell.teacher;
+          teacherSubjects[t] = teacherSubjects[t] || new Set();
+          teacherSubjects[t].add(cell.subject || '');
+          teacherBatches[t] = teacherBatches[t] || new Set();
+          teacherBatches[t].add(batch);
+          teacherBatchSubjects[t] = teacherBatchSubjects[t] || {};
+          teacherBatchSubjects[t][batch] = teacherBatchSubjects[t][batch] || new Set();
+          teacherBatchSubjects[t][batch].add(cell.subject || '');
+        }
+      }
+    });
+
+    function isBusy(t, day, period) {
+      return isTeacherBusyInSchedule(schedule, t, day, period);
+    }
+    
+function getTeacherWeeklyMax(t) {
+      let max = 0;
+      try {
+        Object.values(appState.subjectTeachers).flat().forEach(arr => {
+          arr.forEach(e => { if (e.teacher === t) max += (e.classesPerWeek || 0); });
+        });
+      } catch(e) {}
+      if (!max) max = appState.days.length * appState.periodsPerDay;
+      return max;
+    }
+
+    function countTeacherDaily(schedule, t, dayIdx) {
+      let cnt = 0;
+      for (const b in schedule) {
+        const periodsArr = schedule[b] || [];
+        for (let p = 0; p < periodsArr.length; p++) {
+          const c = periodsArr[p] && periodsArr[p][dayIdx] ? periodsArr[p][dayIdx] : null;
+          if (c && c.teacher === t) cnt++;
+        }
+      }
+      return cnt;
+    }
+
+    function countTeacherWeekly(schedule, t) {
+      let cnt = 0;
+      for (const b in schedule) {
+        const periodsArr = schedule[b] || [];
+        for (let p = 0; p < periodsArr.length; p++) {
+          for (let d = 0; d < appState.days.length; d++) {
+            const c = periodsArr[p] && periodsArr[p][d] ? periodsArr[p][d] : null;
+            if (c && c.teacher === t) cnt++;
+          }
+        }
+      }
+      return cnt;
+    }
+
+    function canAssignTeacherAt(schedule, t, dayIdx, periodIdx) {
+      // ensure teacher isn't busy at this slot
+      if (isTeacherBusyInSchedule(schedule, t, dayIdx, periodIdx)) return false;
+      // check daily max
+      const maxDay = (appState.teacherMax && appState.teacherMax[t]) ? appState.teacherMax[t] : appState.periodsPerDay;
+      const daily = countTeacherDaily(schedule, t, dayIdx);
+      if (daily + 1 > maxDay) return false;
+      // check weekly max
+      const weeklyMax = getTeacherWeeklyMax(t);
+      const weekly = countTeacherWeekly(schedule, t);
+      if (weekly + 1 > weeklyMax) return false;
+      return true;
+    }
+
+    function findReplacementFor(batch, subject, day, period, excluded) {
+      excluded = excluded || [];
+      const excludedSet = new Set(excluded.concat([selectedTeacher]));
+      // First try teachers mapped to this batch who can teach different subjects (avoid same subject-only)
+      for (const t in teacherBatchSubjects) {
+        if (excludedSet.has(t)) continue;
+        if (teacherBatchSubjects[t][batch]) {
+          const subs = Array.from(teacherBatchSubjects[t][batch]);
+          if (subs.length > 0 && !(subs.length === 1 && subs[0] === subject)) {
+            if (canAssignTeacherAt(schedule, t, day, period)) return t;
+          }
+        }
+      }
+      // Then try teachers who teach the subject but not this batch
+      for (const t in teacherSubjects) {
+        if (excludedSet.has(t)) continue;
+        const subs = Array.from(teacherSubjects[t] || []);
+        if (subs.includes(subject) && !(teacherBatches[t] && teacherBatches[t].has(batch))) {
+          if (canAssignTeacherAt(schedule, t, day, period)) return t;
+        }
+      }
+      // Finally, any teacher who is available and within limits
+      for (const t in teacherSubjects) {
+        if (excludedSet.has(t)) continue;
+        if (canAssignTeacherAt(schedule, t, day, period)) return t;
+      }
+      return null;
+    }
+
+
+    const absentHist = baseMeta.absentTeachers;
+    const replaced = [];
+    const unsatisfied = [];
+
+    for (let p = fromPeriod - 1; p < appState.periodsPerDay; p++) {
+      for (const b of Object.keys(schedule)) {
+        const cell = schedule[b] && schedule[b][p] ? schedule[b][p][dayIdx] : null;
+        if (!cell) continue;
+        if (cell.teacher !== selectedTeacher) continue;
+        const replacement = findReplacementFor(b, cell.subject || '', dayIdx, p, absentHist);
+        if (replacement) {
+          cell.originalTeacher = cell.teacher;
+          cell.teacher = replacement;
+          cell.tempReplaced = true;
+          replaced.push({ batch: b, period: p+1, day: dayIdx, original: cell.originalTeacher, replacement });
+        } else {
+          unsatisfied.push({ batch: b, period: p+1, day: dayIdx, cellRef: cell });
+        }
+      }
+    }
+
+    if (unsatisfied.length > 0) {
+      const grouped = unsatisfied.reduce((acc, x) => {
+        acc[x.batch] = acc[x.batch] || [];
+        acc[x.batch].push(x.period);
+        return acc;
+      }, {});
+      const parts = Object.entries(grouped).map(([batch, periods]) => `${batch} (P${periods.join(', ')})`);
+      const dayName = appState.days[dayIdx] || String(dayIdx);
+      const promptMsg = `No available teacher found for ${parts.join('; ')} on ${dayName}. Enter substitute teacher name (leave blank to skip):`;
+      const name = prompt(promptMsg);
+      if (name && name.trim()) {
+        const nm = name.trim();
+        unsatisfied.forEach(item => {
+          const c = item.cellRef;
+          if (!c) return;
+          c.originalTeacher = c.teacher;
+          c.teacher = nm;
+          c.tempReplaced = true;
+          replaced.push({ batch: item.batch, period: item.period, day: dayIdx, original: c.originalTeacher, replacement: nm });
+        });
+      }
+    }
+
+    if (!absentHist.includes(selectedTeacher)) absentHist.push(selectedTeacher);
+    baseMeta.absentTeachers = absentHist;
+    baseMeta.createdAt = new Date().toLocaleString();
+    baseMeta.expiresAt = dateStr || baseMeta.expiresAt || null;
+
+    const username = appState.currentUser && appState.currentUser.username ? appState.currentUser.username : 'default';
+    const arr = loadFinalizedForUser(username) || [];
+    const entry = {
+      id: 'temp-' + Date.now().toString(36) + '-' + Math.floor(Math.random()*10000),
+      generationId: null,
+      title: `Temporary timetable (valid until ${baseMeta.expiresAt || dateStr})`,
+      schedule,
+      meta: baseMeta
+    };
+    arr.push(entry);
+    saveFinalizedForUser(username, arr);
+
+    closeAbsenceModal();
+    renderSidebar();
+    renderDashboard();
+    alert('Temporary timetable generated and saved (valid until ' + (baseMeta.expiresAt || dateStr) + '). Replaced ' + replaced.length + ' periods.');
+  } catch (e) {
+    console.error('confirmAbsence error', e);
+    alert('Failed to generate temporary timetable: ' + (e && e.message ? e.message : e));
+  }
+}
+</script>
+
+</body>
+</html>
